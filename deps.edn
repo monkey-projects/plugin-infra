@@ -1,0 +1,7 @@
+{:deps {dev.nubank/clj-github {:mvn/version "0.6.4"}
+        clj-commons/clj-yaml {:mvn/version "1.0.27"}}
+
+ :aliases
+ {:dev
+  {:extra-deps {yogthos/config {:mvn/version "1.2.0"}}
+   :extra-paths ["dev-resources"]}}}
