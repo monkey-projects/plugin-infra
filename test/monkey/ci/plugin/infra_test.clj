@@ -28,7 +28,10 @@
                   
                   cs/put-content
                   (fn [cs path content]
-                    (when (= {:base-revision ::test-changeset} cs)
+                    (when (= {:images
+                              [{:name "website"
+                                :newTag "test-version"}]}
+                             (sut/yaml-> content))
                       {:base-revision ::new-changeset}))
                   
                   cs/update-branch!

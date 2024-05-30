@@ -4,8 +4,11 @@
 
 (defn patch+commit!
   "Patches version of specified env and image, then commits the changeset."
-  [env img new-v]
-  (-> cc/env
-      :github-token
-      (i/make-client)
-      (i/patch+commit env img new-v)))
+  ([token env img new-v]
+   (-> (i/make-client token)
+       (i/patch+commit env img new-v)))
+  ([env img new-v]
+   (patch+commit! (-> cc/env
+                      :github-token
+                      (i/make-client))
+                  env img new-v)))
