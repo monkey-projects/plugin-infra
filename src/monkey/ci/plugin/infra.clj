@@ -2,8 +2,7 @@
   "MonkeyCI infra functions, that are used in build scripts to auto-deploy updates."
   (:require [clj-github
              [changeset :as cs]
-             [httpkit-client :as ghc]
-             [repository :as repo]]
+             [httpkit-client :as ghc]]
             [clj-yaml.core :as yaml]))
 
 (def org "monkey-projects")
