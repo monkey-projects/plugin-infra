@@ -1,4 +1,5 @@
 (ns monkey.ci.plugin.infra
+  "MonkeyCI infra functions, that are used in build scripts to auto-deploy updates."
   (:require [clj-github
              [changeset :as cs]
              [httpkit-client :as ghc]
