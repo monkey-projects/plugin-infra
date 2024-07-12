@@ -4,7 +4,10 @@
              [changeset :as cs]
              [test-helpers :as th]]
             [cheshire.core :as json]
-            [monkey.ci.plugin.infra :as sut]))
+            [monkey.ci.plugin
+             [clj :as clj]
+             [kube :as kube]
+             [infra :as sut]]))
 
 (defn- ->json [x]
   (json/generate-string x))
@@ -16,22 +19,48 @@
 (def base-path "/repos/monkey-projects/oci-infra")
 
 (deftest patch+commit!
-  (testing "updates version in the kustomization file and commits the changes"
+  (testing "updates prod version in the kustomization file and commits the changes"
     (with-redefs [cs/from-branch!
                   (constantly {:base-revision ::test-changeset})
                   
                   cs/get-content
-                  (constantly (sut/->yaml
+                  (constantly (kube/->yaml
                                {:images
                                 [{:name "website"
                                   :newTag "old-version"}]}))
                   
                   cs/put-content
                   (fn [cs path content]
-                    (when (= {:images
-                              [{:name "website"
-                                :newTag "test-version"}]}
-                             (sut/yaml-> content))
+                    (when (and (= {:images
+                                   [{:name "website"
+                                     :newTag "test-version"}]}
+                                  (kube/yaml-> content))
+                               (= "kubernetes/monkeyci/prod/kustomization.yaml"
+                                  path))
+                      {:base-revision ::new-changeset}))
+                  
+                  cs/update-branch!
+                  (fn [cs]
+                    cs)]
+      (is (= ::new-changeset
+             (-> (sut/patch+commit!
+                  (sut/make-client "test-token")
+                  :prod "website" "test-version")
+                 :base-revision)))))
+
+  (testing "updates staging version in the clj versions file and commits the changes"
+    (with-redefs [cs/from-branch!
+                  (constantly {:base-revision ::test-changeset})
+                  
+                  cs/get-content
+                  (constantly (pr-str {:website "old-version"}))
+                  
+                  cs/put-content
+                  (fn [cs path content]
+                    (when (and (= {:website "test-version"}
+                                  (clj/parse-edn content))
+                               (= "clj/resources/staging/versions.edn"
+                                  path))
                       {:base-revision ::new-changeset}))
                   
                   cs/update-branch!

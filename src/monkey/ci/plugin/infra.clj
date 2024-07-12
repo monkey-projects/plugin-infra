@@ -3,7 +3,9 @@
   (:require [clj-github
              [changeset :as cs]
              [httpkit-client :as ghc]]
-            [clj-yaml.core :as yaml]))
+            [monkey.ci.plugin
+             [clj :as clj]
+             [kube :as kube]]))
 
 (def org "monkey-projects")
 (def repo "oci-infra")
@@ -20,34 +22,14 @@
 (defn get-file [cs path]
   (cs/get-content cs path))
 
-(def yaml-> yaml/parse-string)
-(defn ->yaml [x]
-  (yaml/generate-string x :dumper-options {:flow-style :block}))
+(def patcher-by-env
+  {:prod kube/patch-version
+   :staging clj/patch-version})
 
-(defn update-img-version [conf img new-v]
-  (letfn [(replace-version [imgs]
-            (if-let [match (->> imgs
-                                (filter (comp (partial = img) :name))
-                                (first))]
-              (replace {match (assoc match :newTag new-v)} imgs)
-              ;; No change
-              imgs))]
-    (update conf :images replace-version)))
-
-(defn update-version [yaml img new-v]
-  (some-> yaml
-          (yaml->)
-          (update-img-version img new-v)
-          (->yaml)))
-
-(def env->path
-  (comp (partial format "kubernetes/monkeyci/%s/kustomization.yaml") name))
-
-(defn patch-version
-  "Fetches the `kustomization.yaml` at path for given env, and updates the 
-   version of the named image.  Returns the updated changeset."
-  [cs env img new-v]
-  (cs/update-content cs (env->path env) #(update-version % img new-v)))
+(defn- patch-version [cs env img new-v]
+  (if-let [p (get patcher-by-env env)]
+    (p (partial cs/update-content cs) env img new-v)
+    (throw (ex-info "Unsupported environment" {:env env}))))
 
 (defn commit-msg [env img new-v]
   (format "Upgraded %s %s to version %s" (name env) img new-v))
