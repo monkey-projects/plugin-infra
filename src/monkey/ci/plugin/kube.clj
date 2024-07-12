@@ -16,18 +16,21 @@
               imgs))]
     (update conf :images replace-version)))
 
-(defn update-version [yaml img new-v]
+(defn update-img-versions [conf images]
+  (reduce-kv update-img-version conf images))
+
+(defn update-versions [yaml images]
   (some-> yaml
           (yaml->)
-          (update-img-version img new-v)
+          (update-img-versions images)
           (->yaml)))
 
 (def env->path
   (comp (partial format "kubernetes/monkeyci/%s/kustomization.yaml") name))
 
-(defn patch-version
+(defn patch-versions
   "Fetches the `kustomization.yaml` at path for given env, and updates the 
-   version of the named image.  Returns the updated changeset."
-  [updater env img new-v]
-  (updater (env->path env) #(update-version % img new-v)))
+   version of the named images.  Returns the updated changeset."
+  [updater env images]
+  (updater (env->path env) #(update-versions % images)))
 

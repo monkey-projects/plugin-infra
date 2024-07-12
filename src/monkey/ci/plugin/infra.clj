@@ -3,6 +3,7 @@
   (:require [clj-github
              [changeset :as cs]
              [httpkit-client :as ghc]]
+            [clojure.string :as s]
             [monkey.ci.plugin
              [clj :as clj]
              [kube :as kube]]))
@@ -23,21 +24,27 @@
   (cs/get-content cs path))
 
 (def patcher-by-env
-  {:prod kube/patch-version
-   :staging clj/patch-version})
+  {:prod kube/patch-versions
+   :staging clj/patch-versions})
 
-(defn- patch-version [cs env img new-v]
+(defn- patch-versions [cs env images]
   (if-let [p (get patcher-by-env env)]
-    (p (partial cs/update-content cs) env img new-v)
+    (p (partial cs/update-content cs) env images)
     (throw (ex-info "Unsupported environment" {:env env}))))
 
-(defn commit-msg [env img new-v]
-  (format "Upgraded %s %s to version %s" (name env) img new-v))
+(defn commit-msg [env images]
+  (letfn [(upgrade-msg [[img new-v]]
+            (str img " to " new-v))]
+    (->> images
+         (map upgrade-msg)
+         (s/join ", ")
+         (format "Upgraded %s: %s" (name env)))))
 
 (defn patch+commit!
-  "Patches version of specified env and image, then commits the changeset."
-  [c env img new-v]
+  "Patches version of specified env and images, then commits the changeset.
+   The images is a map of image + version"
+  [c env images]
   (some-> (make-changeset c)
-          (patch-version env img new-v)
-          (cs/commit! (commit-msg env img new-v))
+          (patch-versions env images)
+          (cs/commit! (commit-msg env images))
           (cs/update-branch!)))

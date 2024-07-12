@@ -11,21 +11,30 @@
   (with-open [r (PushbackReader. (StringReader. s))]
     (edn/read r)))
 
-(defn update-img-version [conf img new-v]
-  (assoc conf (keyword img) new-v))
+(def img-map
+  {"website" :website
+   "monkeyci-gui" :gui
+   "monkeyci-api" :api
+   "notifier" :notifier})
+
+(defn update-img-versions [conf images]
+  (reduce-kv (fn [conf img new-v]
+               (assoc conf (img-map img) new-v))
+             conf
+             images))
 
 (defn- pprint [obj]
   (with-open [pw (StringWriter.)]
     (cp/pprint obj pw)
     (.toString pw)))
 
-(defn update-version [edn img new-v]
+(defn update-versions [edn images]
   (some-> edn
           (parse-edn)
-          (update-img-version img new-v)
+          (update-img-versions images)
           (pprint)))
 
-(defn patch-version
+(defn patch-versions
   "Patches the `versions.edn` file in the clj resources for the given env."
-  [updater env img new-v]
-  (updater (env->path env) #(update-version % img new-v)))
+  [updater env images]
+  (updater (env->path env) #(update-versions % images)))

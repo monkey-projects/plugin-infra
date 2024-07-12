@@ -45,7 +45,7 @@
       (is (= ::new-changeset
              (-> (sut/patch+commit!
                   (sut/make-client "test-token")
-                  :prod "website" "test-version")
+                  :prod {"website" "test-version"})
                  :base-revision)))))
 
   (testing "updates staging version in the clj versions file and commits the changes"
@@ -69,5 +69,5 @@
       (is (= ::new-changeset
              (-> (sut/patch+commit!
                   (sut/make-client "test-token")
-                  :staging "website" "test-version")
+                  :staging {"website" "test-version"})
                  :base-revision))))))
