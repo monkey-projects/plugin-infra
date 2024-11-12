@@ -25,7 +25,7 @@
 
 (def patcher-by-env
   {:prod kube/patch-versions
-   :staging clj/patch-versions})
+   :staging kube/patch-versions})
 
 (defn- patch-versions [cs env images]
   (if-let [p (get patcher-by-env env)]

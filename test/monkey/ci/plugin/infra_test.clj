@@ -48,18 +48,23 @@
                   :prod {"website" "test-version"})
                  :base-revision)))))
 
-  (testing "updates staging version in the clj versions file and commits the changes"
+  (testing "updates staging version in the kustomization file and commits the changes"
     (with-redefs [cs/from-branch!
                   (constantly {:base-revision ::test-changeset})
                   
                   cs/get-content
-                  (constantly (pr-str {:website "old-version"}))
+                  (constantly (kube/->yaml
+                               {:images
+                                [{:name "website"
+                                  :newTag "old-version"}]}))
                   
                   cs/put-content
                   (fn [cs path content]
-                    (when (and (= {:website "test-version"}
-                                  (clj/parse-edn content))
-                               (= "clj/resources/staging/versions.edn"
+                    (when (and (= {:images
+                                   [{:name "website"
+                                     :newTag "test-version"}]}
+                                  (kube/yaml-> content))
+                               (= "kubernetes/monkeyci/staging/kustomization.yaml"
                                   path))
                       {:base-revision ::new-changeset}))
                   
